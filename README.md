@@ -14,17 +14,17 @@
 
 ```bash
 pnpm install
-cp .env.example .env.local
+cp .env.example .env
 pnpm dev
 ```
 
 访问：`http://localhost:3000`
 
-`.env.local` 需要填写：
+`.env` 需要填写：
 
 ```bash
-NEXT_PUBLIC_AMAP_KEY="你的高德 Web 端 Key"
-NEXT_PUBLIC_AMAP_SECURITY_CODE="你的高德安全密钥"
+AMAP_KEY="你的高德 Web 端 Key"
+AMAP_SECURITY_CODE="你的高德安全密钥"
 ```
 
 ## 注意

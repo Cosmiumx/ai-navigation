@@ -29,8 +29,8 @@ interface AMapOverlay {
   setPosition?: (position: LngLat) => void;
 }
 
-const amapKey = process.env.NEXT_PUBLIC_AMAP_KEY;
-const amapSecurityCode = process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE;
+const amapKey = process.env.AMAP_KEY;
+const amapSecurityCode = process.env.AMAP_SECURITY_CODE;
 
 function loadAmapScript() {
   if (window.AMap) return Promise.resolve();
@@ -44,7 +44,7 @@ function loadAmapScript() {
     }
 
     if (!amapKey || !amapSecurityCode) {
-      reject(new Error("缺少 NEXT_PUBLIC_AMAP_KEY 或 NEXT_PUBLIC_AMAP_SECURITY_CODE"));
+      reject(new Error("缺少 AMAP_KEY 或 AMAP_SECURITY_CODE"));
       return;
     }
 
@@ -165,7 +165,7 @@ export function RouteBuilder() {
         </p>
 
         {!configReady ? (
-          <div className="notice">请先在 `.env.local` 配置高德 `NEXT_PUBLIC_AMAP_KEY` 和 `NEXT_PUBLIC_AMAP_SECURITY_CODE`。</div>
+          <div className="notice">请先在 `.env` 配置高德 `AMAP_KEY` 和 `AMAP_SECURITY_CODE`。</div>
         ) : null}
 
         <label className="field-label" htmlFor="jsonInput">
