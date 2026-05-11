@@ -29,8 +29,9 @@ interface AMapOverlay {
   setPosition?: (position: LngLat) => void;
 }
 
-const amapKey = process.env.AMAP_KEY;
-const amapSecurityCode = process.env.AMAP_SECURITY_CODE;
+const amapKey = process.env.NEXT_PUBLIC_AMAP_KEY;
+const amapSecurityCode = process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE;
+const maxJsonTextLength = 1_000_000;
 
 function loadAmapScript() {
   if (window.AMap) return Promise.resolve();
@@ -44,7 +45,7 @@ function loadAmapScript() {
     }
 
     if (!amapKey || !amapSecurityCode) {
-      reject(new Error("缺少 AMAP_KEY 或 AMAP_SECURITY_CODE"));
+      reject(new Error("缺少 NEXT_PUBLIC_AMAP_KEY 或 NEXT_PUBLIC_AMAP_SECURITY_CODE"));
       return;
     }
 
@@ -129,6 +130,12 @@ export function RouteBuilder() {
   function renderRoute() {
     let routeJson: RouteJson;
 
+    if (jsonText.length > maxJsonTextLength) {
+      setStatus("JSON 太大，请控制在 1MB 以内再解析。");
+      setAmapLink("");
+      return;
+    }
+
     try {
       routeJson = JSON.parse(jsonText) as RouteJson;
     } catch {
@@ -151,8 +158,12 @@ export function RouteBuilder() {
 
   async function copyLink() {
     if (!amapLink) return;
-    await navigator.clipboard.writeText(amapLink);
-    setStatus("已复制高德骑行分享链接。");
+    try {
+      await navigator.clipboard.writeText(amapLink);
+      setStatus("已复制高德骑行分享链接。");
+    } catch {
+      setStatus("复制失败，请手动选中链接复制。");
+    }
   }
 
   return (
@@ -165,7 +176,7 @@ export function RouteBuilder() {
         </p>
 
         {!configReady ? (
-          <div className="notice">请先在 `.env` 配置高德 `AMAP_KEY` 和 `AMAP_SECURITY_CODE`。</div>
+          <div className="notice">请先在 `.env.local` 配置高德 `NEXT_PUBLIC_AMAP_KEY` 和 `NEXT_PUBLIC_AMAP_SECURITY_CODE`。</div>
         ) : null}
 
         <label className="field-label" htmlFor="jsonInput">

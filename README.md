@@ -14,20 +14,20 @@
 
 ```bash
 pnpm install
-cp .env.example .env
+cp .env.example .env.local
 pnpm dev
 ```
 
 访问：`http://localhost:3000`
 
-`.env` 需要填写：
+`.env.local` 需要填写：
 
 ```bash
-AMAP_KEY="你的高德 Web 端 Key"
-AMAP_SECURITY_CODE="你的高德安全密钥"
+NEXT_PUBLIC_AMAP_KEY="你的高德 Web 端 Key"
+NEXT_PUBLIC_AMAP_SECURITY_CODE="你的高德安全密钥"
 ```
 
 ## 注意
 
-- 高德前端 Key 会暴露在浏览器里，生产环境必须配置域名白名单。
+- 高德前端 Key 和安全密钥会暴露在浏览器里，生产环境必须配置域名白名单。
 - 高德分享链接是用途经点重新规划路线，不是完整导入原始轨迹。
