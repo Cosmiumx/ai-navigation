@@ -34,6 +34,7 @@ body {
 }
 
 button,
+input,
 textarea {
   font: inherit;
 }
@@ -109,10 +110,9 @@ h1 {
   font-weight: 800;
 }
 
-.json-input,
+.url-input,
 .link-output {
   width: 100%;
-  resize: vertical;
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 14px;
@@ -124,18 +124,24 @@ h1 {
   outline: none;
 }
 
-.json-input:focus,
+.url-input:focus,
 .link-output:focus {
   border-color: rgba(25, 122, 95, 0.5);
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
-.json-input {
-  min-height: 220px;
+.url-input {
+  min-height: 52px;
 }
 
 .link-output {
+  resize: vertical;
   min-height: 94px;
+}
+
+.route-form {
+  display: flex;
+  flex-direction: column;
 }
 
 .button-primary,

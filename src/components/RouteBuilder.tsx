@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { buildAmapRideUrl, getPathFromRouteJson, type LngLat, type RouteJson } from "@/lib/amap-route";
 
 declare global {
@@ -31,7 +31,11 @@ interface AMapOverlay {
 
 const amapKey = process.env.NEXT_PUBLIC_AMAP_KEY;
 const amapSecurityCode = process.env.NEXT_PUBLIC_AMAP_SECURITY_CODE;
-const maxJsonTextLength = 1_000_000;
+
+interface WanluRouteResponse {
+  routeJson?: RouteJson;
+  error?: string;
+}
 
 function loadAmapScript() {
   if (window.AMap) return Promise.resolve();
@@ -67,9 +71,10 @@ export function RouteBuilder() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<AMapMap | null>(null);
   const overlaysRef = useRef<AMapOverlay[]>([]);
-  const [jsonText, setJsonText] = useState("");
+  const [urlText, setUrlText] = useState("");
   const [amapLink, setAmapLink] = useState("");
-  const [status, setStatus] = useState("等待粘贴路线 JSON。");
+  const [status, setStatus] = useState("等待输入顽鹿平台 URL。");
+  const [isLoading, setIsLoading] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
   const configReady = useMemo(() => Boolean(amapKey && amapSecurityCode), []);
@@ -87,7 +92,7 @@ export function RouteBuilder() {
           viewMode: "2D",
         });
         setIsMapReady(true);
-        setStatus("地图已就绪，粘贴 JSON 后可生成路线。");
+        setStatus("地图已就绪，输入顽鹿 URL 后可自动生成路线。");
       })
       .catch((error: Error) => {
         setStatus(error.message);
@@ -127,23 +132,7 @@ export function RouteBuilder() {
     map.setFitView(overlaysRef.current, false, [90, 40, 40, 40]);
   }
 
-  function renderRoute() {
-    let routeJson: RouteJson;
-
-    if (jsonText.length > maxJsonTextLength) {
-      setStatus("JSON 太大，请控制在 1MB 以内再解析。");
-      setAmapLink("");
-      return;
-    }
-
-    try {
-      routeJson = JSON.parse(jsonText) as RouteJson;
-    } catch {
-      setStatus("JSON 解析失败，请确认粘贴的是完整接口返回。");
-      setAmapLink("");
-      return;
-    }
-
+  function renderRoute(routeJson: RouteJson) {
     const routePath = getPathFromRouteJson(routeJson);
     if (routePath.length < 2) {
       setStatus("没有找到有效路线点：需要 data.steps[].path，并包含 lat/lng。");
@@ -154,6 +143,39 @@ export function RouteBuilder() {
     drawRoute(routePath);
     setAmapLink(buildAmapRideUrl(routeJson, routePath));
     setStatus(`已转换 ${routePath.length} 个路线点，并生成高德骑行分享链接。`);
+  }
+
+  async function fetchAndRenderRoute(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const targetUrl = urlText.trim();
+    if (!targetUrl) {
+      setStatus("请输入顽鹿平台 URL。");
+      setAmapLink("");
+      return;
+    }
+
+    setIsLoading(true);
+    setAmapLink("");
+    setStatus("正在获取顽鹿路线 JSON...");
+
+    try {
+      const response = await fetch("/api/wanlu-route", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: targetUrl }),
+      });
+      const result = (await response.json()) as WanluRouteResponse;
+      if (!response.ok || !result.routeJson) {
+        throw new Error(result.error || "顽鹿路线获取失败。");
+      }
+
+      renderRoute(result.routeJson);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "顽鹿路线获取失败。");
+      setAmapLink("");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function copyLink() {
@@ -170,29 +192,32 @@ export function RouteBuilder() {
     <main className="app-shell">
       <section className="control-panel">
         <div className="eyebrow">AI Navigation</div>
-        <h1>把路线 JSON 转成高德骑行链接</h1>
+        <h1>把顽鹿路线转成高德骑行链接</h1>
         <p className="intro">
-          粘贴骑行路线接口数据，页面会按 BD-09 转高德坐标，画出路线，并生成可在高德 App 打开的骑行分享链接。
+          输入顽鹿平台路线 URL，页面会自动获取路线 JSON，按 BD-09 转高德坐标，画出路线，并生成可在高德 App 打开的骑行分享链接。
         </p>
 
         {!configReady ? (
           <div className="notice">请先在 `.env.local` 配置高德 `NEXT_PUBLIC_AMAP_KEY` 和 `NEXT_PUBLIC_AMAP_SECURITY_CODE`。</div>
         ) : null}
 
-        <label className="field-label" htmlFor="jsonInput">
-          路线 JSON
-        </label>
-        <textarea
-          id="jsonInput"
-          className="json-input"
-          value={jsonText}
-          onChange={(event) => setJsonText(event.target.value)}
-          placeholder="把完整接口 JSON 粘贴到这里"
-        />
+        <form className="route-form" onSubmit={fetchAndRenderRoute}>
+          <label className="field-label" htmlFor="wanluUrl">
+            顽鹿平台 URL
+          </label>
+          <input
+            id="wanluUrl"
+            className="url-input"
+            value={urlText}
+            onChange={(event) => setUrlText(event.target.value)}
+            placeholder="https://..."
+            type="url"
+          />
 
-        <button className="button-primary" disabled={!isMapReady} type="button" onClick={renderRoute}>
-          渲染路线并生成链接
-        </button>
+          <button className="button-primary" disabled={!isMapReady || isLoading} type="submit">
+            {isLoading ? "正在获取并转换..." : "自动获取并生成链接"}
+          </button>
+        </form>
 
         <label className="field-label" htmlFor="amapLink">
           高德骑行分享链接
